@@ -4,3 +4,557 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>El Trabuco de Mella — Cómic #8 · V2</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111008;
+    background-image:
+      radial-gradient(ellipse at 50% 40%, #1e1608 0%, #0a0a08 60%, #050505 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: Georgia, serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* TITLE */
+  #title-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 12px 28px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.96) 0%, transparent 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 300;
+  }
+  #title-bar h1 { color: #c8a85a; font-size: 13px; letter-spacing: 4px; text-transform: uppercase; }
+  #title-bar .series { color: #444; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; }
+
+  /* STAGE — perspective container */
+  #stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    perspective: 2400px;
+    perspective-origin: 50% 48%;
+  }
+
+  /* BOOK WRAPPER */
+  #book-wrap {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    height: 86vh;
+    transform-style: preserve-3d;
+    /* subtle tilt gives it a physical feel */
+    transform: rotateX(2deg);
+  }
+
+  /* TABLE SHADOW under the book */
+  #book-wrap::after {
+    content: '';
+    position: absolute;
+    bottom: -18px;
+    left: 5%;
+    right: 5%;
+    height: 28px;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.7) 0%, transparent 70%);
+    filter: blur(6px);
+    pointer-events: none;
+  }
+
+  /* PAGE DIMENSIONS */
+  .page-w { width: calc(86vh * 0.72); }
+
+  /* ── STATIC PAGES (the spread that stays) ── */
+  #left-static, #right-static {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    background: #f2ece0;
+  }
+  #left-static {
+    border-radius: 3px 0 0 3px;
+    box-shadow:
+      inset -12px 0 28px rgba(0,0,0,0.22),
+      -4px 0 12px rgba(0,0,0,0.5);
+  }
+  #right-static {
+    border-radius: 0 3px 3px 0;
+    box-shadow:
+      inset 12px 0 28px rgba(0,0,0,0.12),
+      4px 0 12px rgba(0,0,0,0.4);
+  }
+  #left-static img, #right-static img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+
+  /* Spine crease */
+  #spine {
+    width: 6px;
+    height: 100%;
+    background: linear-gradient(to right,
+      #3a2e1a 0%, #c8a85a 20%, #f5edd8 50%, #c8a85a 80%, #3a2e1a 100%);
+    flex-shrink: 0;
+    box-shadow: 0 0 12px rgba(0,0,0,0.8);
+    z-index: 5;
+  }
+
+  /* Blank page style */
+  .blank {
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, #ede8dc 0%, #e4ddd0 40%, #ede8dc 100%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .blank::after {
+    content: '';
+    width: 55%; height: 65%;
+    border: 1px solid rgba(0,0,0,0.07);
+    border-radius: 1px;
+  }
+
+  /* ── FLIP CONTAINER (3D rotating page) ── */
+  #flip-container {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transform-style: preserve-3d;
+    transform-origin: left center;
+    z-index: 20;
+    display: none;
+    pointer-events: none;
+    border-radius: 0 2px 2px 0;
+  }
+
+  #flip-front {
+    position: absolute;
+    width: 100%; height: 100%;
+    overflow: hidden;
+  }
+  #flip-front img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+
+  /* BACK face — shown during second half of flip */
+  #flip-back {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #ece6d8;
+    /* Pre-rotated 180deg so it faces away at start, faces forward at end */
+    transform: rotateY(180deg);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  #flip-back img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    /* rotateY(180deg) on parent already mirrors horizontally — no additional transform needed */
+  }
+
+  /* Dynamic shadow overlay on the flipping page */
+  #flip-shadow {
+    position: absolute;
+    width: 100%; height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    pointer-events: none;
+    border-radius: 0 2px 2px 0;
+    background: linear-gradient(to left, rgba(0,0,0,0.0) 60%, rgba(0,0,0,0.35) 100%);
+    z-index: 1;
+  }
+
+  /* Cast shadow on static pages during flip */
+  #cast-shadow {
+    position: absolute;
+    top: 0; height: 100%;
+    pointer-events: none;
+    z-index: 15;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+
+  /* ── COVER MODE ── */
+  /* cover mode removed — portada always shows as spread with blank left */
+
+  /* ── NAVIGATION ── */
+  .nav-btn {
+    position: fixed;
+    top: 50%; transform: translateY(-50%);
+    width: 50px; height: 80px;
+    background: rgba(200,16,46,0.75);
+    border: none; border-radius: 4px;
+    color: #fff; font-size: 30px;
+    cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    transition: background 0.2s, transform 0.15s;
+    z-index: 300;
+  }
+  .nav-btn:hover  { background: rgba(200,16,46,1); transform: translateY(-50%) scale(1.06); }
+  .nav-btn:active { transform: translateY(-50%) scale(0.95); }
+  .nav-btn:disabled { background: rgba(50,50,50,0.3); cursor: default; pointer-events: none; }
+  #btn-prev { left: 14px; }
+  #btn-next { right: 14px; }
+
+  /* ── THUMBNAILS ── */
+  #thumb-strip {
+    position: fixed; bottom: 42px;
+    left: 50%; transform: translateX(-50%);
+    display: flex; gap: 5px;
+    background: rgba(0,0,0,0.8);
+    border: 1px solid #1e1e1e;
+    border-radius: 6px;
+    padding: 6px 10px;
+    z-index: 300;
+    max-width: 90vw; overflow-x: auto;
+  }
+  .thumb {
+    width: 28px; height: 38px;
+    object-fit: cover; border-radius: 2px;
+    cursor: pointer; opacity: 0.38;
+    border: 1.5px solid transparent;
+    transition: opacity 0.2s, transform 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+  .thumb:hover  { opacity: 0.82; transform: translateY(-3px); }
+  .thumb.active { opacity: 1; border-color: #c8102e; transform: translateY(-5px); }
+
+  /* ── COUNTER ── */
+  #counter {
+    position: fixed; bottom: 13px;
+    left: 50%; transform: translateX(-50%);
+    color: #555; font-size: 11px;
+    letter-spacing: 3px; text-transform: uppercase;
+    z-index: 300; white-space: nowrap;
+  }
+  #counter span { color: #c8102e; font-weight: bold; }
+
+  /* ── HINT ── */
+  #hint {
+    position: fixed; top: 46px; right: 18px;
+    color: #252525; font-size: 10px;
+    letter-spacing: 1px; line-height: 2;
+    text-align: right; z-index: 300;
+  }
+</style>
+</head>
+<body>
+
+<div id="title-bar">
+  <h1>El Trabuco de Mella</h1>
+  <div class="series">La Independencia Dominicana · Cómic #8</div>
+</div>
+<div id="hint">← → teclas · click lados</div>
+
+<div id="stage">
+  <button class="nav-btn" id="btn-prev">&#8249;</button>
+
+  <div id="book-wrap">
+
+    <!-- Static left page -->
+    <div class="page-w" id="left-static">
+      <div class="blank" id="left-blank"></div>
+      <img id="left-img" src="" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;" draggable="false">
+    </div>
+
+    <!-- Spine -->
+    <div id="spine"></div>
+
+    <!-- Static right page -->
+    <div class="page-w" id="right-static">
+      <div class="blank" id="right-blank"></div>
+      <img id="right-img" src="" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;" draggable="false">
+    </div>
+
+    <!-- Cast shadow (falls on static pages from the flipping page) -->
+    <div class="page-w" id="cast-shadow"></div>
+
+    <!-- Flip element — front + back faces -->
+    <div class="page-w" id="flip-container">
+      <div id="flip-front">
+        <img id="flip-front-img" src="" draggable="false">
+        <div id="flip-shadow"></div>
+      </div>
+      <div id="flip-back">
+        <img id="flip-back-img" src="" draggable="false">
+      </div>
+    </div>
+
+  </div>
+
+  <button class="nav-btn" id="btn-next">&#8250;</button>
+</div>
+
+<div id="thumb-strip"></div>
+<div id="counter"></div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const pages = [
+  { file: 'IMAGENES_COMIC8/00.png', label: 'Portada' },
+  { file: 'IMAGENES_COMIC8/01.png', label: 'Página 1' },
+  { file: 'IMAGENES_COMIC8/02.png', label: 'Página 2' },
+  { file: 'IMAGENES_COMIC8/03.png', label: 'Página 3' },
+  { file: 'IMAGENES_COMIC8/04.png', label: 'Página 4' },
+  { file: 'IMAGENES_COMIC8/05.png', label: 'Página 5' },
+  { file: 'IMAGENES_COMIC8/06.png', label: 'Página 6' },
+  { file: 'IMAGENES_COMIC8/07.png', label: 'Página 7' },
+  { file: 'IMAGENES_COMIC8/08.png', label: 'Página 8' },
+  { file: 'IMAGENES_COMIC8/09.png', label: 'Página 9' },
+  { file: 'IMAGENES_COMIC8/10.png', label: 'Página 10' },
+  { file: 'IMAGENES_COMIC8/11.png', label: 'Página 11' },
+  { file: 'IMAGENES_COMIC8/12.png', label: 'Página 12' },
+  { file: 'IMAGENES_COMIC8/13.png', label: 'Página 13' },
+  { file: 'IMAGENES_COMIC8/14.png', label: 'Página 14' },
+  { file: 'IMAGENES_COMIC8/15.png', label: 'Página 15' },
+  { file: 'IMAGENES_COMIC8/16.png', label: 'Página 16' },
+  { file: 'IMAGENES_COMIC8/17.png', label: 'Página 17' },
+  { file: 'IMAGENES_COMIC8/18.png', label: 'Página 18' },
+  { file: 'IMAGENES_COMIC8/19.png', label: 'Página 19' },
+  { file: 'IMAGENES_COMIC8/20.png', label: 'Página 20' },
+  { file: 'IMAGENES_COMIC8/21.png', label: 'Página 21' },
+  { file: 'IMAGENES_COMIC8/22.png', label: 'Página 22' },
+  { file: 'IMAGENES_COMIC8/23.png', label: 'Página 23' },
+];
+
+// Preload
+const cache = {};
+pages.forEach(p => { const i = new Image(); i.src = p.file; cache[p.file] = i; });
+
+// ── SPREAD LOGIC ─────────────────────────────────────────────────────────────
+// spread 0 → cover only (right=p0)
+// spread 1 → left=blank, right=p1
+// spread k≥2 → left=p(2k-2), right=p(2k-1)
+let spread = 0;
+let animating = false;
+
+function maxSpread() { return Math.ceil((pages.length - 1) / 2) + 1; }
+
+function getSpread(si) {
+  if (si === 0) return { left: null, right: pages[0].file, cover: true };
+  if (si === 1) return { left: null, right: pages[1].file, cover: false };
+  const li = 2 * (si - 1), ri = li + 1;
+  return {
+    left:  li < pages.length ? pages[li].file : null,
+    right: ri < pages.length ? pages[ri].file : null,
+    cover: false
+  };
+}
+
+// ── DOM ───────────────────────────────────────────────────────────────────────
+const bookWrap     = document.getElementById('book-wrap');
+const leftStatic   = document.getElementById('left-static');
+const rightStatic  = document.getElementById('right-static');
+const leftBlank    = document.getElementById('left-blank');
+const rightBlank   = document.getElementById('right-blank');
+const leftImg      = document.getElementById('left-img');
+const rightImg     = document.getElementById('right-img');
+const flipCont     = document.getElementById('flip-container');
+const flipFrontImg = document.getElementById('flip-front-img');
+const flipBackImg  = document.getElementById('flip-back-img');
+const flipBack     = document.getElementById('flip-back');
+const castShadow   = document.getElementById('cast-shadow');
+const btnPrev      = document.getElementById('btn-prev');
+const btnNext      = document.getElementById('btn-next');
+const counterEl    = document.getElementById('counter');
+const thumbStrip   = document.getElementById('thumb-strip');
+const spine        = document.getElementById('spine');
+
+// ── THUMBNAILS ────────────────────────────────────────────────────────────────
+pages.forEach((p, i) => {
+  const t = document.createElement('img');
+  t.src = p.file; t.className = 'thumb'; t.title = p.label;
+  t.onclick = () => jumpToPage(i);
+  thumbStrip.appendChild(t);
+});
+
+function jumpToPage(pi) {
+  if (pi === 0) { turnTo(0); return; }
+  if (pi === 1) { turnTo(1); return; }
+  turnTo(Math.floor((pi - 2) / 2) + 2);
+}
+
+// ── RENDER (static state) ─────────────────────────────────────────────────────
+function setSide(blank, img, file) {
+  if (file) {
+    blank.style.display = 'none';
+    img.style.display = 'block';
+    img.src = file;
+  } else {
+    blank.style.display = '';
+    img.style.display = 'none';
+  }
+}
+
+function renderStatic(si) {
+  const sp = getSpread(si);
+
+  if (sp.cover) {
+    // Cover always in spread mode — invisible left, cover on right. No layout jump ever.
+    bookWrap.className = '';
+    leftStatic.style.visibility = 'hidden';   // hide left entirely (shows black background)
+    setSide(leftBlank,  leftImg,  null);
+    setSide(rightBlank, rightImg, sp.right);  // cover on right
+  } else {
+    bookWrap.className = '';
+    leftStatic.style.visibility = '';  // restore left visibility
+    setSide(leftBlank, leftImg, sp.left);
+    setSide(rightBlank, rightImg, sp.right);
+  }
+
+  updateUI(si);
+}
+
+function updateUI(si) {
+  // counter
+  if (si === 0) {
+    counterEl.innerHTML = '<span>Portada</span>';
+  } else if (si === 1) {
+    counterEl.innerHTML = 'Página <span>1</span> de <span>' + (pages.length-1) + '</span>';
+  } else {
+    const li = 2*(si-1), ri = li+1;
+    counterEl.innerHTML = ri < pages.length
+      ? 'Páginas <span>'+li+'</span> y <span>'+ri+'</span> de <span>'+(pages.length-1)+'</span>'
+      : 'Página <span>'+li+'</span> de <span>'+(pages.length-1)+'</span>';
+  }
+  // buttons
+  btnPrev.disabled = si === 0;
+  btnNext.disabled = si >= maxSpread();
+  // thumbs
+  const sp = getSpread(si);
+  const active = [sp.left, sp.right].filter(Boolean);
+  document.querySelectorAll('.thumb').forEach((t,i) => {
+    t.classList.toggle('active', active.includes(pages[i] && pages[i].file));
+  });
+}
+
+// ── 3D PAGE TURN ──────────────────────────────────────────────────────────────
+function turnTo(targetSi) {
+  if (animating || targetSi === spread) return;
+  if (targetSi < 0 || targetSi > maxSpread()) return;
+
+  const dir = targetSi > spread ? 1 : -1; // 1=forward, -1=backward
+  animating = true;
+
+  const currentSp = getSpread(spread);
+  const targetSp  = getSpread(targetSi);
+
+  if (dir === 1) {
+    setSide(rightBlank, rightImg, targetSp.right);
+    const rightRect  = rightStatic.getBoundingClientRect();
+    const wrapRect2  = bookWrap.getBoundingClientRect();
+    const offsetLeft = rightRect.left - wrapRect2.left;
+    flipCont.style.left = offsetLeft + 'px';
+    flipCont.style.transformOrigin = 'left center';
+    flipCont.style.transform = 'rotateY(0deg)';
+    flipCont.style.display = 'block';
+    setFlipFace(flipFrontImg, currentSp.right);
+    setFlipFace(flipBackImg, targetSp.left);
+    castShadow.style.left = (offsetLeft - castShadow.offsetWidth) + 'px';
+    castShadow.style.background = 'linear-gradient(to left, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 100%)';
+    doFlip(0, -180, 650, dir, targetSi, null, () => { leftStatic.style.visibility = ''; setSide(leftBlank, leftImg, targetSp.left); });
+  } else {
+    setSide(leftBlank, leftImg, targetSp.left);
+    const leftRect = leftStatic.getBoundingClientRect();
+    const wrapRect2 = bookWrap.getBoundingClientRect();
+    const offsetLeft = leftRect.left - wrapRect2.left;
+    flipCont.style.left = offsetLeft + 'px';
+    flipCont.style.transformOrigin = 'right center';
+    flipCont.style.transform = 'rotateY(0deg)';
+    flipCont.style.display = 'block';
+    setFlipFace(flipFrontImg, currentSp.left);
+    setFlipFace(flipBackImg, targetSp.right);
+    castShadow.style.left = (offsetLeft + flipCont.offsetWidth) + 'px';
+    castShadow.style.background = 'linear-gradient(to right, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 100%)';
+    doFlip(0, 180, 650, dir, targetSi, null, () => { setSide(rightBlank, rightImg, targetSp.right); });
+  }
+}
+
+function setFlipFace(imgEl, file) {
+  if (!imgEl) return;
+  if (file) { imgEl.src = file; imgEl.style.display = 'block'; }
+  else       { imgEl.style.display = 'none'; imgEl.src = ''; }
+}
+
+function doFlip(fromDeg, toDeg, duration, dir, targetSi, midpointCb, endCb) {
+  const startTime = performance.now();
+  const flipShadowEl = document.getElementById('flip-shadow');
+  castShadow.style.display = 'block';
+  castShadow.style.opacity = '0';
+  flipCont.style.opacity = '1';
+  flipCont.style.transition = '';
+  let midpointFired = false;
+  let endFired = false;
+  function step(now) {
+    let t = Math.min((now - startTime) / duration, 1);
+    t = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+    const deg = fromDeg + (toDeg - fromDeg) * t;
+    flipCont.style.transform = 'rotateY(' + deg + 'deg)';
+    const shadowPeak = Math.sin(t * Math.PI);
+    castShadow.style.opacity = (shadowPeak * 0.5).toString();
+    const edgeness = Math.abs(Math.cos(deg * Math.PI / 180));
+    flipShadowEl.style.opacity = ((1 - edgeness) * 0.5).toString();
+    if (!midpointFired && t >= 0.5) {
+      midpointFired = true;
+      flipCont.style.visibility = 'hidden';
+      if (midpointCb) midpointCb();
+      setTimeout(() => { flipCont.style.visibility = ''; }, 16);
+    }
+    if (!endFired && t >= 0.90) {
+      endFired = true;
+      const ffEl = document.getElementById('flip-front');
+      ffEl.style.transition = 'opacity 0.04s linear';
+      ffEl.style.opacity = '0';
+      castShadow.style.transition = 'opacity 0.08s linear';
+      castShadow.style.opacity = '0';
+      if (endCb) endCb();
+      setTimeout(() => { flipBack.style.transition = 'opacity 0.08s linear'; flipBack.style.opacity = '0'; }, 40);
+    }
+    if (t < 1) { requestAnimationFrame(step); }
+    else {
+      const ffEl = document.getElementById('flip-front');
+      ffEl.style.transition = ''; ffEl.style.opacity = '1';
+      flipBack.style.transition = ''; flipBack.style.opacity = '1';
+      flipCont.style.display = 'none'; flipCont.style.visibility = '';
+      flipCont.style.opacity = '1'; flipCont.style.transition = '';
+      castShadow.style.display = 'none'; castShadow.style.opacity = '0';
+      castShadow.style.transition = '';
+      spread = targetSi; updateUI(targetSi); animating = false;
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+btnNext.addEventListener('click', () => turnTo(spread + 1));
+btnPrev.addEventListener('click', () => turnTo(spread - 1));
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key===' ') { e.preventDefault(); turnTo(spread+1); }
+  if (e.key==='ArrowLeft') { e.preventDefault(); turnTo(spread-1); }
+  if (e.key==='Home') turnTo(0);
+  if (e.key==='End') turnTo(maxSpread());
+});
+document.getElementById('stage').addEventListener('click', e => {
+  if (e.target.closest('.nav-btn,.thumb,#thumb-strip')) return;
+  const wr = bookWrap.getBoundingClientRect();
+  const mid = wr.left + wr.width / 2;
+  if (e.clientX > mid + 30) turnTo(spread + 1);
+  else if (e.clientX < mid - 30) turnTo(spread - 1);
+});
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const d = tx - e.changedTouches[0].clientX;
+  if (Math.abs(d) > 50) turnTo(spread + (d > 0 ? 1 : -1));
+});
+renderStatic(0);
+</script>
+</body>
+</html>
