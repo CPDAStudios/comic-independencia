@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>El Trabuco de Mella — Cómic #8 · Móvil</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111008;
+    background-image: radial-gradient(ellipse at 50% 40%, #1e1608 0%, #0a0a08 60%, #050505 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    font-family: Georgia, serif;
+    overflow: hidden;
+    user-select: none;
+    touch-action: none;
+  }
+
+  /* TITLE BAR */
+  #title-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 6px 14px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, transparent 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 300;
+  }
+  #title-bar h1 { color: #c8a85a; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; }
+  #title-bar .series { color: #444; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; }
+
+  /* STAGE */
+  #stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    perspective: 1800px;
+    perspective-origin: 50% 50%;
+  }
+
+  /* BOOK WRAP — single page, centered */
+  #book-wrap {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    height: 82vh;
+    transform-style: preserve-3d;
+    transform: rotateX(1.5deg);
+  }
+
+  /* TABLE SHADOW */
+  #book-wrap::after {
+    content: '';
+    position: absolute;
+    bottom: -14px;
+    left: 5%; right: 5%;
+    height: 22px;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.65) 0%, transparent 70%);
+    filter: blur(5px);
+    pointer-events: none;
+  }
+
+  /* Single page width — taller ratio for landscape */
+  .page-w { width: calc(82vh * 0.72); }
+
+  /* STATIC PAGE */
+  #page-static {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    background: #f2ece0;
+    border-radius: 3px;
+    box-shadow:
+      -4px 0 14px rgba(0,0,0,0.6),
+       4px 0 14px rgba(0,0,0,0.4),
+      inset 0 0 20px rgba(0,0,0,0.08);
+  }
+  #page-static img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+
+  /* ── FLIP CONTAINER ── */
+  #flip-container {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transform-style: preserve-3d;
+    z-index: 20;
+    display: none;
+    pointer-events: none;
+    border-radius: 3px;
+  }
+
+  #flip-front {
+    position: absolute;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 3px;
+  }
+  #flip-front img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+
+  #flip-back {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #ece6d8;
+    transform: rotateY(180deg);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 3px;
+  }
+  #flip-back img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+
+  /* Self-shadow on flipping page */
+  #flip-shadow {
+    position: absolute;
+    width: 100%; height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    pointer-events: none;
+    background: linear-gradient(to left, rgba(0,0,0,0.0) 60%, rgba(0,0,0,0.3) 100%);
+    z-index: 1;
+    border-radius: 3px;
+  }
+
+  /* ── NAV BUTTONS ── */
+  .nav-btn {
+    position: fixed;
+    top: 50%; transform: translateY(-50%);
+    width: 38px; height: 64px;
+    background: rgba(200,16,46,0.75);
+    border: none; border-radius: 4px;
+    color: #fff; font-size: 26px;
+    cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    transition: background 0.2s, transform 0.15s;
+    z-index: 300;
+  }
+  .nav-btn:hover  { background: rgba(200,16,46,1); }
+  .nav-btn:active { transform: translateY(-50%) scale(0.92); }
+  .nav-btn:disabled { background: rgba(50,50,50,0.3); cursor: default; pointer-events: none; }
+  #btn-prev { left: 6px; }
+  #btn-next { right: 6px; }
+
+  /* ── THUMBNAILS ── */
+  #thumb-strip {
+    position: fixed; bottom: 36px;
+    left: 50%; transform: translateX(-50%);
+    display: flex; gap: 4px;
+    background: rgba(0,0,0,0.82);
+    border: 1px solid #1e1e1e;
+    border-radius: 5px;
+    padding: 5px 8px;
+    z-index: 300;
+    max-width: 88vw; overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #thumb-strip::-webkit-scrollbar { height: 3px; }
+  #thumb-strip::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+  .thumb {
+    width: 22px; height: 30px;
+    object-fit: cover; border-radius: 2px;
+    cursor: pointer; opacity: 0.38;
+    border: 1.5px solid transparent;
+    transition: opacity 0.2s, transform 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+  .thumb:hover  { opacity: 0.82; }
+  .thumb.active { opacity: 1; border-color: #c8102e; transform: translateY(-4px); }
+
+  /* ── COUNTER ── */
+  #counter {
+    position: fixed; bottom: 12px;
+    left: 50%; transform: translateX(-50%);
+    color: #555; font-size: 10px;
+    letter-spacing: 3px; text-transform: uppercase;
+    z-index: 300; white-space: nowrap;
+  }
+  #counter span { color: #c8102e; font-weight: bold; }
+
+  /* ── SWIPE HINT ── */
+  #hint {
+    position: fixed; top: 30px; right: 10px;
+    color: #252525; font-size: 9px;
+    letter-spacing: 1px; line-height: 2;
+    text-align: right; z-index: 300;
+  }
+
+  /* ── DESKTOP LINK ── */
+  #desktop-link {
+    position: fixed; top: 30px; left: 10px;
+    color: #333; font-size: 9px;
+    letter-spacing: 1px; text-transform: uppercase;
+    z-index: 300; text-decoration: none;
+    border: 1px solid #2a2a2a;
+    padding: 3px 7px; border-radius: 3px;
+  }
+  #desktop-link:hover { color: #c8a85a; border-color: #c8a85a; }
+</style>
+</head>
+<body>
+
+<div id="title-bar">
+  <h1>El Trabuco de Mella</h1>
+  <div class="series">Cómic #8</div>
+</div>
+<div id="hint">← desliza →</div>
+<a href="index.html" id="desktop-link">🖥 Desktop</a>
+
+<div id="stage">
+  <button class="nav-btn" id="btn-prev">&#8249;</button>
+
+  <div id="book-wrap">
+
+    <!-- Single static page -->
+    <div class="page-w" id="page-static">
+      <img id="page-img" src="" draggable="false">
+    </div>
+
+    <!-- Flip element -->
+    <div class="page-w" id="flip-container">
+      <div id="flip-front">
+        <img id="flip-front-img" src="" draggable="false">
+        <div id="flip-shadow"></div>
+      </div>
+      <div id="flip-back">
+        <img id="flip-back-img" src="" draggable="false">
+      </div>
+    </div>
+
+  </div>
+
+  <button class="nav-btn" id="btn-next">&#8250;</button>
+</div>
+
+<div id="thumb-strip"></div>
+<div id="counter"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const pages = [
+  { file: '00.png', label: 'Portada' },
+  { file: '01.png', label: 'Página 1' },
+  { file: '02.png', label: 'Página 2' },
+  { file: '03.png', label: 'Página 3' },
+  { file: '04.png', label: 'Página 4' },
+  { file: '05.png', label: 'Página 5' },
+  { file: '06.png', label: 'Página 6' },
+  { file: '07.png', label: 'Página 7' },
+  { file: '08.png', label: 'Página 8' },
+  { file: '09.png', label: 'Página 9' },
+  { file: '10.png', label: 'Página 10' },
+  { file: '11.png', label: 'Página 11' },
+  { file: '12.png', label: 'Página 12' },
+  { file: '13.png', label: 'Página 13' },
+  { file: '14.png', label: 'Página 14' },
+  { file: '15.png', label: 'Página 15' },
+  { file: '16.png', label: 'Página 16' },
+  { file: '17.png', label: 'Página 17' },
+  { file: '18.png', label: 'Página 18' },
+  { file: '19.png', label: 'Página 19' },
+  { file: '20.png', label: 'Página 20' },
+  { file: '21.png', label: 'Página 21' },
+  { file: '22.png', label: 'Página 22' },
+  { file: '23.png', label: 'Página 23' },
+];
+
+// Preload adjacent pages
+const cache = {};
+function preload(i) {
+  if (i < 0 || i >= pages.length || cache[i]) return;
+  const img = new Image(); img.src = pages[i].file; cache[i] = img;
+}
+
+let current = 0;
+let animating = false;
+
+// ── DOM ───────────────────────────────────────────────────────────────────────
+const pageStatic   = document.getElementById('page-static');
+const pageImg      = document.getElementById('page-img');
+const flipCont     = document.getElementById('flip-container');
+const flipFrontImg = document.getElementById('flip-front-img');
+const flipBackImg  = document.getElementById('flip-back-img');
+const flipBack     = document.getElementById('flip-back');
+const btnPrev      = document.getElementById('btn-prev');
+const btnNext      = document.getElementById('btn-next');
+const counterEl    = document.getElementById('counter');
+const thumbStrip   = document.getElementById('thumb-strip');
+
+// ── THUMBNAILS ────────────────────────────────────────────────────────────────
+pages.forEach((p, i) => {
+  const t = document.createElement('img');
+  t.src = p.file; t.className = 'thumb'; t.title = p.label;
+  t.onclick = () => jumpTo(i);
+  thumbStrip.appendChild(t);
+});
+
+function jumpTo(i) {
+  if (i === current || animating) return;
+  turnTo(i);
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderStatic(i) {
+  pageImg.src = pages[i].file;
+  updateUI(i);
+  // preload neighbors
+  preload(i - 1); preload(i + 1); preload(i + 2);
+}
+
+function updateUI(i) {
+  if (i === 0) {
+    counterEl.innerHTML = '<span>Portada</span>';
+  } else {
+    counterEl.innerHTML = 'Página <span>' + i + '</span> de <span>' + (pages.length - 1) + '</span>';
+  }
+  btnPrev.disabled = i === 0;
+  btnNext.disabled = i >= pages.length - 1;
+
+  document.querySelectorAll('.thumb').forEach((t, idx) => {
+    t.classList.toggle('active', idx === i);
+  });
+  // scroll active thumb into view
+  const activeThumb = thumbStrip.querySelectorAll('.thumb')[i];
+  if (activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
+
+// ── 3D PAGE TURN ──────────────────────────────────────────────────────────────
+function turnTo(target) {
+  if (animating || target === current) return;
+  if (target < 0 || target >= pages.length) return;
+
+  const dir = target > current ? 1 : -1;
+  animating = true;
+
+  const pageRect = pageStatic.getBoundingClientRect();
+  const wrapRect = document.getElementById('book-wrap').getBoundingClientRect();
+  const offsetLeft = pageRect.left - wrapRect.left;
+
+  if (dir === 1) {
+    // FORWARD: current page flips left, next page appears underneath
+    // Pre-show destination in static (it's covered by flip-front)
+    pageImg.src = pages[target].file;
+
+    flipCont.style.left = offsetLeft + 'px';
+    flipCont.style.transformOrigin = 'left center';
+    flipCont.style.transform = 'rotateY(0deg)';
+    flipCont.style.display = 'block';
+
+    flipFrontImg.src = pages[current].file;
+    flipFrontImg.style.display = 'block';
+    flipBackImg.src = pages[target].file;
+    flipBackImg.style.display = 'block';
+
+    doFlip(0, -180, 600, target);
+
+  } else {
+    // BACKWARD: current page flips right, previous page appears underneath
+    pageImg.src = pages[target].file;
+
+    flipCont.style.left = offsetLeft + 'px';
+    flipCont.style.transformOrigin = 'right center';
+    flipCont.style.transform = 'rotateY(0deg)';
+    flipCont.style.display = 'block';
+
+    flipFrontImg.src = pages[current].file;
+    flipFrontImg.style.display = 'block';
+    flipBackImg.src = pages[target].file;
+    flipBackImg.style.display = 'block';
+
+    doFlip(0, 180, 600, target);
+  }
+}
+
+function doFlip(fromDeg, toDeg, duration, targetIdx) {
+  const startTime = performance.now();
+  const flipShadowEl = document.getElementById('flip-shadow');
+  const flipFrontEl  = document.getElementById('flip-front');
+  let endFired = false;
+
+  function step(now) {
+    let t = Math.min((now - startTime) / duration, 1);
+    // Ease in-out cubic
+    t = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3) / 2;
+
+    const deg = fromDeg + (toDeg - fromDeg) * t;
+    flipCont.style.transform = 'rotateY(' + deg + 'deg)';
+
+    // Self-shadow peaks at edge-on
+    const edgeness = Math.abs(Math.cos(deg * Math.PI / 180));
+    flipShadowEl.style.opacity = ((1 - edgeness) * 0.45).toString();
+
+    // At 88%: start fading out the flip overlay
+    if (!endFired && t >= 0.88) {
+      endFired = true;
+      flipFrontEl.style.transition = 'opacity 0.05s linear';
+      flipFrontEl.style.opacity = '0';
+      setTimeout(() => {
+        flipBack.style.transition = 'opacity 0.08s linear';
+        flipBack.style.opacity = '0';
+      }, 35);
+    }
+
+    if (t < 1) {
+      requestAnimationFrame(step);
+    } else {
+      // Cleanup
+      flipFrontEl.style.transition = '';
+      flipFrontEl.style.opacity = '1';
+      flipBack.style.transition = '';
+      flipBack.style.opacity = '1';
+      flipCont.style.display = 'none';
+      flipCont.style.transform = 'rotateY(0deg)';
+      current = targetIdx;
+      updateUI(targetIdx);
+      preload(targetIdx - 1);
+      preload(targetIdx + 1);
+      preload(targetIdx + 2);
+      animating = false;
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+// ── EVENTS ────────────────────────────────────────────────────────────────────
+btnNext.addEventListener('click', () => turnTo(current + 1));
+btnPrev.addEventListener('click', () => turnTo(current - 1));
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); turnTo(current + 1); }
+  if (e.key === 'ArrowLeft')                    { e.preventDefault(); turnTo(current - 1); }
+  if (e.key === 'Home') turnTo(0);
+  if (e.key === 'End')  turnTo(pages.length - 1);
+});
+
+// Touch swipe
+let touchStartX = 0, touchStartY = 0;
+document.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  const dx = touchStartX - e.changedTouches[0].clientX;
+  const dy = touchStartY - e.changedTouches[0].clientY;
+  // Only trigger if mostly horizontal swipe
+  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    turnTo(current + (dx > 0 ? 1 : -1));
+  }
+}, { passive: true });
+
+// Click left/right half to navigate
+document.getElementById('stage').addEventListener('click', e => {
+  if (e.target.closest('.nav-btn, .thumb, #thumb-strip')) return;
+  const mid = window.innerWidth / 2;
+  if (e.clientX > mid + 20)      turnTo(current + 1);
+  else if (e.clientX < mid - 20) turnTo(current - 1);
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+renderStatic(0);
+</script>
+</body>
+</html>
