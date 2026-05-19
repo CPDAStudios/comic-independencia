@@ -53,6 +53,7 @@
     display: flex;
     align-items: stretch;
     height: 82vh;
+    max-width: calc(100vw - 90px);
     transform-style: preserve-3d;
     transform: rotateX(1.5deg);
   }
@@ -69,8 +70,14 @@
     pointer-events: none;
   }
 
-  /* Single page width — taller ratio for landscape */
+  /* Single page width — adapts to orientation */
   .page-w { width: calc(82vh * 0.72); }
+
+  /* Portrait: constrain by viewport width so nothing gets clipped */
+  @media (orientation: portrait) {
+    .page-w { width: calc((100vw - 100px) * 0.9); }
+    #book-wrap { height: calc((100vw - 100px) * 0.9 / 0.72); max-height: 82vh; }
+  }
 
   /* STATIC PAGE */
   #page-static {
@@ -473,7 +480,38 @@ document.getElementById('stage').addEventListener('click', e => {
   else if (e.clientX < mid - 20) turnTo(current - 1);
 });
 
+// ── RESIZE / ORIENTATION ─────────────────────────────────────────────────────
+function fitBook() {
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const navW = 90; // space taken by two nav buttons
+  const thumbH = 80; // space for thumbs + counter at bottom
+  const titleH = 36; // title bar
+
+  if (isPortrait) {
+    const availW = window.innerWidth - navW;
+    const pageH = availW / 0.72;
+    const maxH = window.innerHeight - titleH - thumbH;
+    const finalH = Math.min(pageH, maxH);
+    const finalW = finalH * 0.72;
+    document.querySelectorAll('.page-w').forEach(el => { el.style.width = finalW + 'px'; });
+    document.getElementById('book-wrap').style.height = finalH + 'px';
+  } else {
+    const availH = window.innerHeight - titleH - thumbH;
+    const finalH = availH * 0.9;
+    const finalW = finalH * 0.72;
+    const maxW = window.innerWidth - navW;
+    const clampedW = Math.min(finalW, maxW);
+    const clampedH = clampedW / 0.72;
+    document.querySelectorAll('.page-w').forEach(el => { el.style.width = clampedW + 'px'; });
+    document.getElementById('book-wrap').style.height = clampedH + 'px';
+  }
+}
+
+window.addEventListener('resize', fitBook);
+window.addEventListener('orientationchange', () => setTimeout(fitBook, 150));
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
+fitBook();
 renderStatic(0);
 </script>
 </body>
