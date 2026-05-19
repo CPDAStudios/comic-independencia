@@ -138,24 +138,30 @@
     border-radius: 3px;
   }
 
-  /* ── NAV BUTTONS — always visible, even when zoomed ── */
-  .nav-btn {
+  /* ── NAV BUTTONS — in a zoom-proof overlay ── */
+  #nav-overlay {
     position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 44px; height: 72px;
-    background: rgba(200,16,46,0.85);
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    /* transform-origin top-left so JS scale correction works */
+    transform-origin: 0 0;
+  }
+  .nav-btn {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    width: 32px; height: 52px;
+    background: rgba(200,16,46,0.45);
     border: none; border-radius: 6px;
-    color: #fff; font-size: 28px;
+    color: #fff; font-size: 22px;
     cursor: pointer; display: flex;
     align-items: center; justify-content: center;
-    z-index: 9999;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.7);
-    /* Stay fixed relative to viewport even when page is zoomed */
-    -webkit-transform: translateY(-50%);
+    pointer-events: all;
+    backdrop-filter: blur(2px);
   }
-  .nav-btn:active { opacity: 0.7; }
-  .nav-btn:disabled { background: rgba(50,50,50,0.3); cursor: default; pointer-events: none; }
+  .nav-btn:active { opacity: 0.5; }
+  .nav-btn:disabled { background: rgba(50,50,50,0.2); cursor: default; pointer-events: none; }
   #btn-prev { left: 4px; }
   #btn-next { right: 4px; }
 
@@ -225,8 +231,13 @@
 <div id="hint">← desliza →</div>
 <a href="index.html" id="desktop-link">🖥 Desktop</a>
 
-<div id="stage">
+<!-- Zoom-proof nav overlay — lives outside the zoomable content -->
+<div id="nav-overlay">
   <button class="nav-btn" id="btn-prev">&#8249;</button>
+  <button class="nav-btn" id="btn-next">&#8250;</button>
+</div>
+
+<div id="stage">
 
   <div id="book-wrap">
 
@@ -248,7 +259,7 @@
 
   </div>
 
-  <button class="nav-btn" id="btn-next">&#8250;</button>
+
 </div>
 
 <div id="thumb-strip"></div>
@@ -496,6 +507,27 @@ function fitBook() {
 
 window.addEventListener('resize', fitBook);
 window.addEventListener('orientationchange', () => setTimeout(fitBook, 150));
+
+// ── ZOOM-PROOF NAV OVERLAY ────────────────────────────────────────────────────
+// When the user pinch-zooms, the browser scales the viewport.
+// We counter-scale the nav overlay so buttons stay at real pixel size.
+const navOverlay = document.getElementById('nav-overlay');
+function fixNavScale() {
+  // window.visualViewport gives us the actual zoom scale
+  if (window.visualViewport) {
+    const scale = 1 / window.visualViewport.scale;
+    const offsetX = window.visualViewport.offsetLeft;
+    const offsetY = window.visualViewport.offsetTop;
+    navOverlay.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+    navOverlay.style.width  = window.visualViewport.width  * window.visualViewport.scale + 'px';
+    navOverlay.style.height = window.visualViewport.height * window.visualViewport.scale + 'px';
+  }
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('scroll', fixNavScale);
+  window.visualViewport.addEventListener('resize', fixNavScale);
+}
+fixNavScale();
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 fitBook();
