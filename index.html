@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>El Trabuco de Mella — Cómic #8 · V2</title>
+<title>El Trabuco de Mella â CÃ³mic #8 Â· V2</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -35,7 +35,7 @@
   #title-bar h1 { color: #c8a85a; font-size: 13px; letter-spacing: 4px; text-transform: uppercase; }
   #title-bar .series { color: #444; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; }
 
-  /* STAGE — perspective container */
+  /* STAGE â perspective container */
   #stage {
     display: flex;
     align-items: center;
@@ -73,7 +73,7 @@
   /* PAGE DIMENSIONS */
   .page-w { width: calc(86vh * 0.72); }
 
-  /* ── STATIC PAGES (the spread that stays) ── */
+  /* ââ STATIC PAGES (the spread that stays) ââ */
   #left-static, #right-static {
     position: relative;
     height: 100%;
@@ -120,7 +120,7 @@
     border-radius: 1px;
   }
 
-  /* ── FLIP CONTAINER (3D rotating page) ── */
+  /* ââ FLIP CONTAINER (3D rotating page) ââ */
   #flip-container {
     position: absolute;
     top: 0;
@@ -142,7 +142,7 @@
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
 
-  /* BACK face — shown during second half of flip */
+  /* BACK face â shown during second half of flip */
   #flip-back {
     position: absolute;
     top: 0; left: 0;
@@ -156,7 +156,7 @@
   }
   #flip-back img {
     width: 100%; height: 100%; object-fit: cover; display: block;
-    /* rotateY(180deg) on parent already mirrors horizontally — no additional transform needed */
+    /* rotateY(180deg) on parent already mirrors horizontally â no additional transform needed */
   }
 
   /* Dynamic shadow overlay on the flipping page */
@@ -182,10 +182,10 @@
     transition: opacity 0.1s;
   }
 
-  /* ── COVER MODE ── */
-  /* cover mode removed — portada always shows as spread with blank left */
+  /* ââ COVER MODE ââ */
+  /* cover mode removed â portada always shows as spread with blank left */
 
-  /* ── NAVIGATION ── */
+  /* ââ NAVIGATION ââ */
   .nav-btn {
     position: fixed;
     top: 50%; transform: translateY(-50%);
@@ -204,7 +204,7 @@
   #btn-prev { left: 14px; }
   #btn-next { right: 14px; }
 
-  /* ── THUMBNAILS ── */
+  /* ââ THUMBNAILS ââ */
   #thumb-strip {
     position: fixed; bottom: 42px;
     left: 50%; transform: translateX(-50%);
@@ -227,7 +227,7 @@
   .thumb:hover  { opacity: 0.82; transform: translateY(-3px); }
   .thumb.active { opacity: 1; border-color: #c8102e; transform: translateY(-5px); }
 
-  /* ── COUNTER ── */
+  /* ââ COUNTER ââ */
   #counter {
     position: fixed; bottom: 13px;
     left: 50%; transform: translateX(-50%);
@@ -237,7 +237,7 @@
   }
   #counter span { color: #c8102e; font-weight: bold; }
 
-  /* ── HINT ── */
+  /* ââ HINT ââ */
   #hint {
     position: fixed; top: 46px; right: 18px;
     color: #252525; font-size: 10px;
@@ -250,9 +250,9 @@
 
 <div id="title-bar">
   <h1>El Trabuco de Mella</h1>
-  <div class="series">La Independencia Dominicana · Cómic #8</div>
+  <div class="series">La Independencia Dominicana Â· CÃ³mic #8</div>
 </div>
-<div id="hint">← → teclas · click lados</div>
+<div id="hint">â â teclas Â· click lados</div>
 
 <div id="stage">
   <button class="nav-btn" id="btn-prev">&#8249;</button>
@@ -277,7 +277,7 @@
     <!-- Cast shadow (falls on static pages from the flipping page) -->
     <div class="page-w" id="cast-shadow"></div>
 
-    <!-- Flip element — front + back faces -->
+    <!-- Flip element â front + back faces -->
     <div class="page-w" id="flip-container">
       <div id="flip-front">
         <img id="flip-front-img" src="" draggable="false">
@@ -297,42 +297,42 @@
 <div id="counter"></div>
 
 <script>
-// ── DATA ─────────────────────────────────────────────────────────────────────
+// ââ DATA âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const pages = [
-  { file: 'IMAGENES_COMIC8/00.png', label: 'Portada' },
-  { file: 'IMAGENES_COMIC8/01.png', label: 'Página 1' },
-  { file: 'IMAGENES_COMIC8/02.png', label: 'Página 2' },
-  { file: 'IMAGENES_COMIC8/03.png', label: 'Página 3' },
-  { file: 'IMAGENES_COMIC8/04.png', label: 'Página 4' },
-  { file: 'IMAGENES_COMIC8/05.png', label: 'Página 5' },
-  { file: 'IMAGENES_COMIC8/06.png', label: 'Página 6' },
-  { file: 'IMAGENES_COMIC8/07.png', label: 'Página 7' },
-  { file: 'IMAGENES_COMIC8/08.png', label: 'Página 8' },
-  { file: 'IMAGENES_COMIC8/09.png', label: 'Página 9' },
-  { file: 'IMAGENES_COMIC8/10.png', label: 'Página 10' },
-  { file: 'IMAGENES_COMIC8/11.png', label: 'Página 11' },
-  { file: 'IMAGENES_COMIC8/12.png', label: 'Página 12' },
-  { file: 'IMAGENES_COMIC8/13.png', label: 'Página 13' },
-  { file: 'IMAGENES_COMIC8/14.png', label: 'Página 14' },
-  { file: 'IMAGENES_COMIC8/15.png', label: 'Página 15' },
-  { file: 'IMAGENES_COMIC8/16.png', label: 'Página 16' },
-  { file: 'IMAGENES_COMIC8/17.png', label: 'Página 17' },
-  { file: 'IMAGENES_COMIC8/18.png', label: 'Página 18' },
-  { file: 'IMAGENES_COMIC8/19.png', label: 'Página 19' },
-  { file: 'IMAGENES_COMIC8/20.png', label: 'Página 20' },
-  { file: 'IMAGENES_COMIC8/21.png', label: 'Página 21' },
-  { file: 'IMAGENES_COMIC8/22.png', label: 'Página 22' },
-  { file: 'IMAGENES_COMIC8/23.png', label: 'Página 23' },
+  { file: '00.png', label: 'Portada' },
+  { file: '01.png', label: 'PÃ¡gina 1' },
+  { file: '02.png', label: 'PÃ¡gina 2' },
+  { file: '03.png', label: 'PÃ¡gina 3' },
+  { file: '04.png', label: 'PÃ¡gina 4' },
+  { file: '05.png', label: 'PÃ¡gina 5' },
+  { file: '06.png', label: 'PÃ¡gina 6' },
+  { file: '07.png', label: 'PÃ¡gina 7' },
+  { file: '08.png', label: 'PÃ¡gina 8' },
+  { file: '09.png', label: 'PÃ¡gina 9' },
+  { file: '10.png', label: 'PÃ¡gina 10' },
+  { file: '11.png', label: 'PÃ¡gina 11' },
+  { file: '12.png', label: 'PÃ¡gina 12' },
+  { file: '13.png', label: 'PÃ¡gina 13' },
+  { file: '14.png', label: 'PÃ¡gina 14' },
+  { file: '15.png', label: 'PÃ¡gina 15' },
+  { file: '16.png', label: 'PÃ¡gina 16' },
+  { file: '17.png', label: 'PÃ¡gina 17' },
+  { file: '18.png', label: 'PÃ¡gina 18' },
+  { file: '19.png', label: 'PÃ¡gina 19' },
+  { file: '20.png', label: 'PÃ¡gina 20' },
+  { file: '21.png', label: 'PÃ¡gina 21' },
+  { file: '22.png', label: 'PÃ¡gina 22' },
+  { file: '23.png', label: 'PÃ¡gina 23' },
 ];
 
 // Preload
 const cache = {};
 pages.forEach(p => { const i = new Image(); i.src = p.file; cache[p.file] = i; });
 
-// ── SPREAD LOGIC ─────────────────────────────────────────────────────────────
-// spread 0 → cover only (right=p0)
-// spread 1 → left=blank, right=p1
-// spread k≥2 → left=p(2k-2), right=p(2k-1)
+// ââ SPREAD LOGIC âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// spread 0 â cover only (right=p0)
+// spread 1 â left=blank, right=p1
+// spread kâ¥2 â left=p(2k-2), right=p(2k-1)
 let spread = 0;
 let animating = false;
 
@@ -349,7 +349,7 @@ function getSpread(si) {
   };
 }
 
-// ── DOM ───────────────────────────────────────────────────────────────────────
+// ââ DOM âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const bookWrap     = document.getElementById('book-wrap');
 const leftStatic   = document.getElementById('left-static');
 const rightStatic  = document.getElementById('right-static');
@@ -368,7 +368,7 @@ const counterEl    = document.getElementById('counter');
 const thumbStrip   = document.getElementById('thumb-strip');
 const spine        = document.getElementById('spine');
 
-// ── THUMBNAILS ────────────────────────────────────────────────────────────────
+// ââ THUMBNAILS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 pages.forEach((p, i) => {
   const t = document.createElement('img');
   t.src = p.file; t.className = 'thumb'; t.title = p.label;
@@ -382,7 +382,7 @@ function jumpToPage(pi) {
   turnTo(Math.floor((pi - 2) / 2) + 2);
 }
 
-// ── RENDER (static state) ─────────────────────────────────────────────────────
+// ââ RENDER (static state) âââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function setSide(blank, img, file) {
   if (file) {
     blank.style.display = 'none';
@@ -398,7 +398,7 @@ function renderStatic(si) {
   const sp = getSpread(si);
 
   if (sp.cover) {
-    // Cover always in spread mode — invisible left, cover on right. No layout jump ever.
+    // Cover always in spread mode â invisible left, cover on right. No layout jump ever.
     bookWrap.className = '';
     leftStatic.style.visibility = 'hidden';   // hide left entirely (shows black background)
     setSide(leftBlank,  leftImg,  null);
@@ -418,12 +418,12 @@ function updateUI(si) {
   if (si === 0) {
     counterEl.innerHTML = '<span>Portada</span>';
   } else if (si === 1) {
-    counterEl.innerHTML = 'Página <span>1</span> de <span>' + (pages.length-1) + '</span>';
+    counterEl.innerHTML = 'PÃ¡gina <span>1</span> de <span>' + (pages.length-1) + '</span>';
   } else {
     const li = 2*(si-1), ri = li+1;
     counterEl.innerHTML = ri < pages.length
-      ? 'Páginas <span>'+li+'</span> y <span>'+ri+'</span> de <span>'+(pages.length-1)+'</span>'
-      : 'Página <span>'+li+'</span> de <span>'+(pages.length-1)+'</span>';
+      ? 'PÃ¡ginas <span>'+li+'</span> y <span>'+ri+'</span> de <span>'+(pages.length-1)+'</span>'
+      : 'PÃ¡gina <span>'+li+'</span> de <span>'+(pages.length-1)+'</span>';
   }
   // buttons
   btnPrev.disabled = si === 0;
@@ -436,7 +436,7 @@ function updateUI(si) {
   });
 }
 
-// ── 3D PAGE TURN ──────────────────────────────────────────────────────────────
+// ââ 3D PAGE TURN ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function turnTo(targetSi) {
   if (animating || targetSi === spread) return;
   if (targetSi < 0 || targetSi > maxSpread()) return;
