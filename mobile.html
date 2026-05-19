@@ -355,9 +355,26 @@ function updateUI(i) {
 }
 
 // ── 3D PAGE TURN ──────────────────────────────────────────────────────────────
+function resetZoom() {
+  // Reset pinch zoom to 1x before turning the page
+  const vv = window.visualViewport;
+  if (vv && vv.scale !== 1) {
+    // The only reliable cross-browser way to reset zoom is to temporarily
+    // set maximum-scale=1 on the viewport meta, then restore it
+    const meta = document.querySelector('meta[name=viewport]');
+    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    setTimeout(() => {
+      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes';
+      fixNavScale();
+    }, 50);
+  }
+}
+
 function turnTo(target) {
   if (animating || target === current) return;
   if (target < 0 || target >= pages.length) return;
+
+  resetZoom();
 
   const dir = target > current ? 1 : -1;
   animating = true;
